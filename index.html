@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plant Care — Interactive Prototypes</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --page:#e9e7e1;
+  }
+  html,body{ background:var(--page); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#1a1a1a; }
+  body{ min-height:100vh; padding:28px 16px 60px; }
+
+  /* ---------- selector ---------- */
+  .picker{
+    max-width:920px; margin:0 auto 26px; text-align:center;
+  }
+  .picker h1{
+    font-size:20px; font-weight:600; letter-spacing:-.01em; margin-bottom:4px;
+  }
+  .picker p{ font-size:13.5px; color:#6b6b6b; margin-bottom:18px; }
+  .tabs{ display:inline-flex; gap:6px; background:#dcd9d1; padding:5px; border-radius:14px; flex-wrap:wrap; justify-content:center; }
+  .tab{
+    border:none; background:transparent; cursor:pointer; font-size:13px; font-weight:600;
+    padding:9px 16px; border-radius:10px; color:#555; transition:.18s; font-family:inherit;
+  }
+  .tab.active{ background:#fff; color:#1a1a1a; box-shadow:0 1px 4px rgba(0,0,0,.1); }
+  .tab small{ display:block; font-weight:400; font-size:10.5px; color:#8a8a8a; margin-top:1px; }
+  .tab.active small{ color:#7a7a7a; }
+
+  /* ---------- phone stage ---------- */
+  .stage{ display:flex; justify-content:center; }
+  .phone{
+    position:relative; width:390px; height:800px; background:#000; border-radius:52px;
+    padding:11px; box-shadow:0 40px 80px -30px rgba(0,0,0,.5), 0 0 0 2px #000; flex:0 0 auto;
+  }
+  .notch{
+    position:absolute; top:11px; left:50%; transform:translateX(-50%);
+    width:150px; height:32px; background:#000; border-radius:0 0 20px 20px; z-index:100;
+  }
+  .viewport{
+    width:100%; height:100%; border-radius:42px; overflow:hidden; position:relative; background:#fff;
+  }
+  .app{ display:none; width:100%; height:100%; position:absolute; inset:0; }
+  .app.active{ display:block; }
+
+  /* generic screen system */
+  .screen{ display:none; width:100%; height:100%; position:absolute; inset:0; flex-direction:column; }
+  .screen.show{ display:flex; }
+  .statusbar{
+    height:52px; flex:0 0 auto; display:flex; align-items:flex-end; justify-content:space-between;
+    padding:0 26px 7px; font-size:14px; font-weight:600;
+  }
+  .statusbar .dots{ letter-spacing:2px; }
+  .scroll{ flex:1; overflow-y:auto; }
+  .scroll::-webkit-scrollbar{ display:none; }
+
+  .caption{ text-align:center; font-size:12px; color:#8a8a8a; margin-top:16px; font-weight:500; }
+
+  /* ===================================================================
+     ALT 1 — INSPECTION (warm / cream)
+     =================================================================== */
+  .a1{ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  .a1 .statusbar{ color:#2b2822; }
+  .a1-home .hd{ padding:6px 24px 14px; border-bottom:1px solid #ececec; }
+  .a1-home .hd h2{ text-align:center; font-size:19px; font-weight:700; color:#1c1c1c; }
+  .a1-home .hd .date{ text-align:center; font-size:13px; color:#9a9a9a; margin-top:2px; }
+  .a1-home .dots{ position:absolute; right:26px; color:#bbb; letter-spacing:2px; }
+  .a1 .sect{ font-size:12px; font-weight:700; letter-spacing:.09em; color:#a59d8e; padding:20px 24px 10px; }
+  .a1 .card{
+    margin:0 18px 12px; padding:16px; border-radius:16px; display:flex; align-items:center; gap:14px;
+    cursor:pointer; transition:.15s; border:1.5px solid transparent;
+  }
+  .a1 .card:active{ transform:scale(.985); }
+  .a1 .card.look{ background:#efe6d6; border-color:#d8c3a0; }
+  .a1 .card.settled,.a1 .card.coming{ background:#fff; border:1px solid #e8e8e8; }
+  .a1 .thumb{ width:46px; height:46px; border-radius:11px; background:#e5e9e2; display:flex; align-items:center; justify-content:center; font-size:24px; flex:0 0 auto; }
+  .a1 .card .body{ flex:1; min-width:0; }
+  .a1 .card .body h3{ font-size:16.5px; font-weight:700; color:#1c1c1c; }
+  .a1 .card .body p{ font-size:13px; color:#7d766a; margin-top:3px; line-height:1.35; }
+  .a1 .pill{ flex:0 0 auto; font-size:13px; font-weight:600; padding:7px 15px; border-radius:999px; }
+  .a1 .pill.look{ background:#8a5a34; color:#fff; }
+  .a1 .pill.day{ background:#eef2f6; color:#3e6178; border:1px solid #cdd9e2; }
+  .a1 .pill.settled{ background:#eaf1ea; color:#4b6b4f; border:1px solid #cddbcd; }
+  .a1 .note{
+    margin:8px 22px 20px; padding:14px 16px; border:1px dashed #cfc8b8; border-radius:12px;
+    font-size:12.5px; color:#9a9284; line-height:1.5;
+  }
+  .a1 .note b{ color:#6f6858; }
+
+  /* check screen */
+  .a1-check .topbar,.a1-result .topbar{
+    display:flex; align-items:center; justify-content:space-between; padding:4px 22px 12px;
+    border-bottom:1px solid #ececec;
+  }
+  .a1-check .topbar .ti,.a1-result .topbar .ti{ text-align:center; flex:1; }
+  .a1-check .topbar h2,.a1-result .topbar h2{ font-size:17px; font-weight:700; }
+  .a1-check .topbar .sub,.a1-result .topbar .sub{ font-size:12.5px; color:#9a9a9a; margin-top:1px; }
+  .a1 .nav{ font-size:22px; color:#3e6178; cursor:pointer; width:28px; }
+  .a1 .nav.x{ text-align:right; }
+  .a1-check h1{ font-family:Georgia,"Times New Roman",serif; font-size:27px; font-weight:400; color:#1c1c1c; padding:26px 24px 18px; line-height:1.2; }
+  .a1-check .guide{
+    margin:0 22px; padding:18px; border:1px dashed #d5cdbd; border-radius:14px; display:flex; gap:14px; align-items:center;
+  }
+  .a1-check .guide .cup{ width:52px; height:56px; flex:0 0 auto; }
+  .a1-check .guide p{ font-size:13.5px; color:#6f6858; line-height:1.45; }
+  .a1-check .guide b{ color:#3a352c; }
+  .a1-check .qlabel{ font-size:12px; font-weight:700; letter-spacing:.09em; color:#a59d8e; padding:0 24px 12px; margin-top:auto; }
+  .a1-check .opts{ padding:0 22px 20px; }
+  .a1 .opt{
+    display:flex; align-items:center; justify-content:space-between; width:100%; background:#fff;
+    border:1.5px solid #e2e2e2; border-radius:14px; padding:16px 18px; margin-bottom:10px; cursor:pointer;
+    font-family:inherit; transition:.14s;
+  }
+  .a1 .opt:active{ transform:scale(.99); }
+  .a1 .opt .k{ font-size:16px; font-weight:700; color:#1c1c1c; }
+  .a1 .opt .v{ font-size:13px; }
+  .a1 .opt.dry .v{ color:#8a5a34; }
+  .a1 .opt.dry{ border-color:#c99a5f; }
+  .a1 .opt.wet .v{ color:#3e6178; }
+  .a1 .opt.wet{ border-color:#9db4c4; }
+  .a1 .opt.damp .v{ color:#8a8a8a; }
+  .a1 .opt.nolook{ border-style:dashed; border-color:#d5cdbd; justify-content:center; }
+  .a1 .opt.nolook .k{ color:#9a9284; font-weight:500; font-size:14.5px; }
+
+  /* result screen */
+  .a1-result .big{
+    margin:20px 22px 0; padding:22px; border-radius:16px; border:1px solid #cfdce6; background:#e9f0f5;
+  }
+  .a1-result .big.hold{ background:#eef1ea; border-color:#d3ddce; }
+  .a1-result .big h1{ font-family:Georgia,serif; font-size:26px; font-weight:400; color:#2f4f63; margin-bottom:10px; }
+  .a1-result .big.hold h1{ color:#4b6b4f; }
+  .a1-result .big p{ font-size:14.5px; color:#3a352c; line-height:1.5; }
+  .a1-result .facts{ margin:18px 22px 0; padding:18px; border:1px solid #eaeaea; border-radius:14px; }
+  .a1-result .facts h4{ font-size:11.5px; font-weight:700; letter-spacing:.09em; color:#a59d8e; margin-bottom:10px; }
+  .a1-result .facts p{ font-size:14px; color:#3a352c; line-height:1.6; }
+  .a1-result .facts b{ font-weight:700; }
+  .a1-result .conf{ padding:18px 24px 6px; }
+  .a1-result .conf h4{ font-size:11.5px; font-weight:700; letter-spacing:.09em; color:#a59d8e; margin-bottom:10px; }
+  .a1-result .bar{ height:7px; background:#e2e2e2; border-radius:99px; overflow:hidden; }
+  .a1-result .bar i{ display:block; height:100%; width:60%; background:#3e6178; }
+  .a1-result .conf .cc{ font-size:12.5px; color:#8a8a8a; margin-top:8px; }
+  .a1-result .why{ margin:6px 22px; padding:14px 16px; border:1px dashed #d5cdbd; border-radius:12px; font-size:12.5px; color:#9a9284; line-height:1.5; }
+  .a1-result .why b{ color:#6f6858; }
+  .a1 .cta{
+    margin:auto 22px 22px; padding:17px; border-radius:14px; background:#3e6178; color:#fff;
+    text-align:center; font-size:16px; font-weight:600; cursor:pointer; border:none; width:calc(100% - 44px); font-family:inherit;
+  }
+  .a1 .cta:active{ transform:scale(.99); }
+  .a1 .cta.hold{ background:#4b6b4f; }
+  .toast{
+    position:absolute; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:#1c1c1c; color:#fff; font-size:13.5px; padding:12px 20px; border-radius:12px;
+    opacity:0; transition:.3s; z-index:200; white-space:nowrap; pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ===================================================================
+     ALT 2 — CHAT (warm paper)
+     =================================================================== */
+  .a2{ background:#f3f1ec; }
+  .a2 .statusbar{ color:#2b2822; background:#fff; }
+  .a2 .chat-hd{
+    background:#fff; border-bottom:1px solid #eee; padding:4px 18px 14px; display:flex; align-items:center; gap:12px;
+  }
+  .a2 .chat-hd .back{ font-size:22px; color:#8a8a8a; cursor:pointer; }
+  .a2 .avatars{ display:flex; }
+  .a2 .avatars span{
+    width:30px; height:30px; border-radius:50%; background:#e3e0d8; border:2px solid #fff;
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:#7a7468; margin-left:-8px;
+  }
+  .a2 .avatars span:first-child{ margin-left:0; }
+  .a2 .chat-hd .who h3{ font-size:15.5px; font-weight:700; }
+  .a2 .chat-hd .who p{ font-size:12px; color:#9a9a9a; }
+  .a2 .thread{ flex:1; overflow-y:auto; padding:16px 16px 8px; background:#f3f1ec; }
+  .a2 .thread::-webkit-scrollbar{ display:none; }
+  .a2 .day{ text-align:center; font-size:11px; font-weight:700; letter-spacing:.08em; color:#b3ab9c; margin:6px 0 16px; }
+  .a2 .msg{ max-width:82%; padding:12px 15px; border-radius:18px; font-size:14.5px; line-height:1.4; margin-bottom:10px; animation:pop .25s ease; }
+  @keyframes pop{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none;} }
+  .a2 .msg.me{ background:#2b2822; color:#fff; margin-left:auto; border-bottom-right-radius:5px; }
+  .a2 .msg.app{ background:#e7e4dc; color:#2b2822; border-bottom-left-radius:5px; }
+  .a2 .sender{ font-size:11.5px; color:#9a9a9a; margin:2px 2px 4px; }
+  .a2 .echo{
+    background:#fff; border:1px solid #e6e3da; border-radius:14px; margin-bottom:10px; overflow:hidden; animation:pop .3s ease;
+  }
+  .a2 .echo .row{ display:flex; align-items:center; gap:9px; padding:12px 14px; border-bottom:1px solid #f0ede6; font-size:14px; }
+  .a2 .echo .row:last-of-type{ border-bottom:none; }
+  .a2 .echo .row .ck{ color:#4b6b4f; font-weight:700; }
+  .a2 .echo .row .obs{ color:#9a9a9a; font-size:12.5px; font-style:italic; }
+  .a2 .echo .row .pen{ margin-left:auto; color:#b3ab9c; cursor:pointer; }
+  .a2 .echo .chips{ display:flex; gap:7px; padding:11px 14px; flex-wrap:wrap; border-top:1px dashed #ece8df; }
+  .a2 .echo-chip,.a2 .chip{
+    font-size:12.5px; padding:7px 13px; border-radius:999px; border:1px solid #d8d3c7; background:#fff;
+    cursor:pointer; color:#3a352c; font-family:inherit; transition:.14s; white-space:nowrap;
+  }
+  .a2 .chip.sel,.a2 .echo-chip.sel{ background:#2b2822; color:#fff; border-color:#2b2822; }
+  .a2 .chip:active{ transform:scale(.96); }
+  .a2 .reasoncard{ background:#eceae2; border-radius:14px; padding:14px 16px; font-size:13.5px; color:#5a544a; line-height:1.5; margin-bottom:10px; animation:pop .3s ease; }
+  .a2 .remind{ background:#eceae2; border-radius:14px; padding:14px 16px; margin-bottom:10px; animation:pop .3s ease; }
+  .a2 .remind h4{ font-size:14.5px; font-weight:700; color:#2b2822; margin-bottom:8px; }
+  .a2 .remind ul{ list-style:none; }
+  .a2 .remind li{ font-size:13px; color:#7a7468; padding-left:14px; position:relative; margin-bottom:3px; }
+  .a2 .remind li::before{ content:"–"; position:absolute; left:0; }
+  .a2 .rowbtns{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .a2 .rb{
+    font-size:13px; padding:9px 15px; border-radius:999px; border:1px solid #d8d3c7; background:#fff;
+    cursor:pointer; color:#3a352c; font-family:inherit; transition:.14s;
+  }
+  .a2 .rb.done{ border-color:#4b6b4f; color:#4b6b4f; }
+  .a2 .rb:active{ transform:scale(.96); }
+  .a2 .digest{ background:#fff; border:1px solid #e6e3da; border-radius:14px; padding:4px 0; margin-bottom:10px; animation:pop .3s ease; }
+  .a2 .dplant{ padding:13px 15px; border-bottom:1px solid #f0ede6; cursor:pointer; }
+  .a2 .dplant:last-child{ border-bottom:none; }
+  .a2 .dplant .dh{ display:flex; align-items:center; gap:8px; }
+  .a2 .dplant .dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+  .a2 .dot.red{ background:#b5563f; } .a2 .dot.green{ background:#4b6b4f; } .a2 .dot.grey{ background:#c3bdb0; }
+  .a2 .dplant h4{ font-size:14.5px; font-weight:700; }
+  .a2 .dplant .st{ font-size:12.5px; color:#9a9a9a; margin-left:16px; margin-top:2px; }
+  .a2 .dplant .exp{ margin:8px 0 2px 16px; display:none; }
+  .a2 .dplant.open .exp{ display:block; }
+  .a2 .dplant .ev{ display:flex; gap:8px; align-items:flex-start; margin-bottom:7px; }
+  .a2 .dplant .ev .d2{ width:7px; height:7px; border-radius:50%; margin-top:5px; flex:0 0 auto; }
+  .a2 .dplant .ev p{ font-size:12.5px; color:#5a544a; line-height:1.3; }
+  .a2 .dplant .ev p span{ display:block; color:#a8a294; font-size:11.5px; }
+  .a2 .chev{ float:right; color:#c3bdb0; transition:.2s; }
+  .a2 .dplant.open .chev{ transform:rotate(90deg); }
+  .a2 .sitter{ background:#fff; border:1px solid #e6e3da; border-radius:14px; overflow:hidden; margin-bottom:10px; animation:pop .3s ease; }
+  .a2 .sitter .url{ background:#eceae2; text-align:center; font-size:12.5px; color:#7a7468; padding:9px; border-radius:8px; margin:12px; }
+  .a2 .sitter .sh{ padding:0 14px 10px; }
+  .a2 .sitter .sh h4{ font-size:15px; font-weight:700; } .a2 .sitter .sh p{ font-size:12px; color:#9a9a9a; }
+  .a2 .srow{ display:flex; align-items:center; gap:11px; padding:11px 14px; border-top:1px solid #f0ede6; }
+  .a2 .srow .box{ width:38px; height:38px; border:1px solid #ddd; border-radius:8px; flex:0 0 auto; position:relative; }
+  .a2 .srow .box::after{ content:"✕"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#ddd; font-size:15px; }
+  .a2 .srow .si{ flex:1; } .a2 .srow .si h5{ font-size:13.5px; font-weight:700; } .a2 .srow .si p{ font-size:11.5px; color:#9a9a9a; }
+  .a2 .srow .donebtn{ font-size:12.5px; font-weight:600; padding:7px 15px; border-radius:999px; border:1.5px solid #2b2822; background:#fff; cursor:pointer; font-family:inherit; }
+  .a2 .srow .donebtn.done{ background:#4b6b4f; border-color:#4b6b4f; color:#fff; }
+  .a2 .composer{ background:#fff; border-top:1px solid #eee; padding:10px 14px; }
+  .a2 .starters{ display:flex; gap:7px; margin-bottom:9px; flex-wrap:wrap; }
+  .a2 .cbox{ display:flex; align-items:center; gap:10px; }
+  .a2 .cbox .plus{ width:32px; height:32px; border-radius:50%; background:#f0ede6; color:#9a9a9a; display:flex; align-items:center; justify-content:center; font-size:20px; flex:0 0 auto; }
+  .a2 .cbox input{ flex:1; border:1px solid #e2ded4; border-radius:999px; padding:10px 16px; font-size:14px; font-family:inherit; background:#f7f5f0; }
+  .a2 .cbox input:focus{ outline:none; border-color:#c3bdb0; }
+  .a2 .cbox .send{ width:34px; height:34px; border-radius:50%; background:#2b2822; color:#fff; border:none; cursor:pointer; font-size:16px; flex:0 0 auto; }
+
+  /* ===================================================================
+     ALT 3 — EXPLANATION (refreshed, professional)
+     =================================================================== */
+  .a3{ background:#0f1613; }
+  .a3 .statusbar{ color:#e8ede9; }
+  .a3-home .hd{ padding:8px 24px 18px; }
+  .a3-home .hd h2{ font-size:26px; font-weight:700; color:#f1f5f2; letter-spacing:-.02em; }
+  .a3-home .hd .date{ font-size:13px; color:#7c8a82; margin-top:8px; }
+  .a3-home .hd .count{ font-size:14px; color:#a9b8af; margin-top:2px; font-weight:500; }
+  .a3 .pcard{
+    margin:0 18px 14px; padding:18px; border-radius:18px; background:#18211c; border:1px solid #263029;
+    cursor:pointer; transition:.16s;
+  }
+  .a3 .pcard:active{ transform:scale(.985); }
+  .a3 .pcard .top{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .a3 .pcard .ic{ width:44px; height:44px; border-radius:12px; background:#212c25; display:flex; align-items:center; justify-content:center; font-size:24px; flex:0 0 auto; }
+  .a3 .pcard .nm{ flex:1; }
+  .a3 .pcard .nm h3{ font-size:18px; font-weight:700; color:#f1f5f2; }
+  .a3 .pcard .nm p{ font-size:12.5px; color:#7c8a82; margin-top:2px; }
+  .a3 .tag{ font-size:11.5px; font-weight:700; letter-spacing:.05em; padding:6px 13px; border-radius:999px; }
+  .a3 .tag.water{ background:#e8927c; color:#3a140c; }
+  .a3 .tag.check{ background:#e8cf7c; color:#3a2f0c; }
+  .a3 .pcard .reason{ font-size:14px; color:#c4d0c8; line-height:1.45; }
+  .a3 .pcard .reason .sep{ color:#4a5a50; margin:0 7px; }
+
+  /* detail */
+  .a3-detail .topbar{ display:flex; align-items:center; gap:12px; padding:4px 22px 16px; border-bottom:1px solid #263029; }
+  .a3-detail .topbar .back{ font-size:24px; color:#a9b8af; cursor:pointer; }
+  .a3-detail .topbar h2{ font-size:21px; font-weight:700; color:#f1f5f2; display:flex; align-items:center; gap:8px; }
+  .a3-detail .action{
+    margin:22px; padding:20px; border-radius:16px; text-align:center; background:#e8927c;
+  }
+  .a3-detail .action h1{ font-size:25px; font-weight:800; color:#3a140c; letter-spacing:-.01em; }
+  .a3-detail .whyhd{ font-size:12.5px; font-weight:700; letter-spacing:.08em; color:#7c8a82; padding:0 24px 4px; text-transform:uppercase; }
+  .a3-detail .factor{ padding:18px 24px; border-bottom:1px solid #1c251f; }
+  .a3-detail .factor h4{ font-size:17px; font-weight:700; color:#f1f5f2; margin-bottom:4px; }
+  .a3-detail .factor p{ font-size:13.5px; color:#9aa89f; line-height:1.4; }
+  .a3 .logbtn{
+    margin:auto 22px 24px; padding:17px; border-radius:14px; background:#dfe8e2; color:#0f1613;
+    text-align:center; font-size:16px; font-weight:700; cursor:pointer; border:none; width:calc(100% - 44px); font-family:inherit;
+  }
+  .a3 .logbtn:active{ transform:scale(.99); }
+
+  /* log */
+  .a3-log .topbar{ display:flex; align-items:center; gap:12px; padding:4px 22px 16px; border-bottom:1px solid #263029; }
+  .a3-log .topbar .back{ font-size:24px; color:#a9b8af; cursor:pointer; }
+  .a3-log .topbar h2{ font-size:20px; font-weight:700; color:#f1f5f2; display:flex; align-items:center; gap:7px; }
+  .a3-log .ql{ font-size:14px; font-weight:700; color:#c4d0c8; padding:22px 24px 12px; }
+  .a3-log .choices{ display:flex; gap:10px; padding:0 24px; }
+  .a3 .choice{
+    flex:1; padding:14px; border-radius:12px; background:#18211c; border:1.5px solid #2a352d; color:#c4d0c8;
+    font-size:14.5px; font-weight:600; cursor:pointer; font-family:inherit; transition:.14s; text-align:center;
+  }
+  .a3 .choice.sm{ flex:0 1 auto; padding:12px 20px; }
+  .a3 .choice.sel{ background:#2f4a3a; border-color:#4a7a5c; color:#eafff1; }
+  .a3 .choice:active{ transform:scale(.98); }
+  .a3-log .notehd{ font-size:17px; font-weight:700; color:#f1f5f2; padding:28px 24px 12px; }
+  .a3-log textarea{
+    margin:0 24px; width:calc(100% - 48px); height:100px; background:#18211c; border:1.5px solid #2a352d;
+    border-radius:12px; padding:14px; color:#e8ede9; font-size:14px; font-family:inherit; resize:none;
+  }
+  .a3-log textarea:focus{ outline:none; border-color:#4a7a5c; }
+  .a3-log textarea::placeholder{ color:#5c6a61; }
+
+  @media (max-width:440px){
+    body{ padding:16px 8px 40px; }
+    .phone{ width:100%; max-width:390px; height:auto; aspect-ratio:390/800; }
+  }
+  @media (prefers-reduced-motion:reduce){ *{ animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body>
+
+<div class="picker">
+  <h1>Plant care — three designs</h1>
+  <p>Tap through each one. They solve the same task in different ways.</p>
+  <div class="tabs">
+    <button class="tab active" data-app="app1">Inspection<small>check, don't guess</small></button>
+    <button class="tab" data-app="app2">Conversational<small>just text it</small></button>
+    <button class="tab" data-app="app3">Explanation<small>show the reasoning</small></button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="viewport">
+
+      <!-- ============ APP 1 : INSPECTION ============ -->
+      <div class="app a1 active" id="app1">
+        <!-- HOME -->
+        <div class="screen a1-home show" data-screen="a1-home">
+          <div class="statusbar"><span>9:41</span><span class="dots">•••</span></div>
+          <div class="hd"><h2>Your plants</h2><div class="date">Tue 14 Jun</div></div>
+          <div class="scroll">
+            <div class="sect">WORTH A LOOK TODAY</div>
+            <div class="card look" onclick="a1open('Fern','bathroom','Last looked 6 days ago')">
+              <div class="thumb">🌿</div>
+              <div class="body"><h3>Fern — bathroom</h3><p>Last looked 6 days ago · dries in ~7</p></div>
+              <div class="pill look">Look</div>
+            </div>
+            <div class="card look" onclick="a1open('Pothos','desk','Hot week — checking 2 days early')">
+              <div class="thumb">🪴</div>
+              <div class="body"><h3>Pothos — desk</h3><p>Hot week — checking 2 days early</p></div>
+              <div class="pill look">Look</div>
+            </div>
+            <div class="sect">COMING UP</div>
+            <div class="card coming">
+              <div class="thumb">🌱</div>
+              <div class="body"><h3>Snake plant — hallway</h3><p>Look in 9 days · dries in ~24</p></div>
+              <div class="pill day">Thu</div>
+            </div>
+            <div class="card settled">
+              <div class="thumb">🌵</div>
+              <div class="body"><h3>Jade — windowsill</h3><p>Watered 3 days ago, soil still wet</p></div>
+              <div class="pill settled">Settled</div>
+            </div>
+            <div class="note"><b>Deliberately absent:</b> no red overdue badges, no streak counter, no "you missed 4 waterings." Falling behind is a reason to look, not a failure.</div>
+          </div>
+        </div>
+        <!-- CHECK -->
+        <div class="screen a1-check" data-screen="a1-check">
+          <div class="statusbar"><span>9:41</span><span class="dots">•••</span></div>
+          <div class="topbar">
+            <span class="nav" onclick="a1show('a1-home')">‹</span>
+            <div class="ti"><h2 id="a1cName">Pothos</h2><div class="sub">Step 1 of 1</div></div>
+            <span class="nav x" onclick="a1show('a1-home')">✕</span>
+          </div>
+          <h1>Check the top inch of soil.</h1>
+          <div class="guide">
+            <svg class="cup" viewBox="0 0 52 56"><path d="M8 6 L44 6 L39 52 L13 52 Z" fill="none" stroke="#cbc3b3" stroke-width="1.5"/><line x1="11" y1="16" x2="41" y2="16" stroke="#cbc3b3" stroke-width="1" stroke-dasharray="3 3"/><text x="26" y="13" font-size="6" fill="#a89e8c" text-anchor="middle">1 in</text><path d="M26 20 L26 26 M23 23 L26 26 L29 23" stroke="#a89e8c" stroke-width="1.2" fill="none"/></svg>
+            <p>Your 5-inch pot: about <b>one knuckle deep</b>. Push in until your fingertip is level with the rim line.</p>
+          </div>
+          <div class="qlabel">WHAT DID YOU FIND?</div>
+          <div class="opts">
+            <button class="opt dry" onclick="a1result('dry')"><span class="k">Dry</span><span class="v">nothing sticks</span></button>
+            <button class="opt damp" onclick="a1result('damp')"><span class="k">Damp</span><span class="v">cool, crumbles</span></button>
+            <button class="opt wet" onclick="a1result('wet')"><span class="k">Wet</span><span class="v">clings to finger</span></button>
+            <button class="opt nolook" onclick="a1result('nolook')"><span class="k">I watered without looking</span></button>
+          </div>
+        </div>
+        <!-- RESULT -->
+        <div class="screen a1-result" data-screen="a1-result">
+          <div class="statusbar"><span>9:42</span><span class="dots">•••</span></div>
+          <div class="topbar">
+            <span class="nav" onclick="a1show('a1-check')">‹</span>
+            <div class="ti"><h2 id="a1rName">Pothos</h2><div class="sub" id="a1rSub">Reported dry</div></div>
+            <span class="nav x" onclick="a1show('a1-home')">✕</span>
+          </div>
+          <div class="scroll" id="a1resultBody"><!-- filled by JS --></div>
+        </div>
+        <div class="toast" id="a1toast"></div>
+      </div>
+
+      <!-- ============ APP 2 : CHAT ============ -->
+      <div class="app a2" id="app2">
+        <div class="screen show" data-screen="a2-main">
+          <div class="statusbar"><span>9:41</span><span class="dots">▭ ▭</span></div>
+          <div class="chat-hd">
+            <span class="back">‹</span>
+            <div class="avatars"><span>R</span><span>A</span><span>M</span></div>
+            <div class="who"><h3>Plants</h3><p>You, Adrian, Maya</p></div>
+          </div>
+          <div class="thread" id="a2thread">
+            <div class="day">TODAY</div>
+          </div>
+          <div class="composer">
+            <div class="starters">
+              <button class="chip" onclick="a2starter('log')">Log a watering</button>
+              <button class="chip" onclick="a2starter('attention')">What needs attention?</button>
+              <button class="chip" onclick="a2starter('away')">Going away?</button>
+            </div>
+            <div class="cbox">
+              <span class="plus">+</span>
+              <input id="a2input" placeholder="Message" onkeydown="if(event.key==='Enter')a2send()">
+              <button class="send" onclick="a2send()">↑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ APP 3 : EXPLANATION ============ -->
+      <div class="app a3" id="app3">
+        <!-- HOME -->
+        <div class="screen a3-home show" data-screen="a3-home">
+          <div class="statusbar"><span>9:41</span><span class="dots">▬</span></div>
+          <div class="hd">
+            <h2>Your Plants</h2>
+            <div class="date">Tuesday, July 20</div>
+            <div class="count" id="a3count">2 plants need attention</div>
+          </div>
+          <div class="scroll">
+            <div class="pcard" id="a3card-bonsai" onclick="a3detail()">
+              <div class="top">
+                <div class="ic">🪴</div>
+                <div class="nm"><h3>Bonsai</h3><p>Bedroom</p></div>
+                <div class="tag water" id="a3tag-bonsai">WATER</div>
+              </div>
+              <div class="reason" id="a3reason-bonsai">Soil dry 2 days ago <span class="sep">|</span> 88°F <span class="sep">|</span> Dries fast</div>
+            </div>
+            <div class="pcard">
+              <div class="top">
+                <div class="ic">🌵</div>
+                <div class="nm"><h3>Snake Plant</h3><p>Living Room</p></div>
+                <div class="tag check">CHECK</div>
+              </div>
+              <div class="reason">14 days since last watered <span class="sep">|</span> Might be dry but check before watering</div>
+            </div>
+          </div>
+        </div>
+        <!-- DETAIL -->
+        <div class="screen a3-detail" data-screen="a3-detail">
+          <div class="statusbar"><span>9:41</span><span class="dots">▬</span></div>
+          <div class="topbar"><span class="back" onclick="a3show('a3-home')">‹</span><h2>Bonsai 🪴</h2></div>
+          <div class="scroll">
+            <div class="action"><h1>Water today</h1></div>
+            <div class="whyhd">Why we're saying that</div>
+            <div class="factor"><h4>Soil felt dry</h4><p>2 days ago you logged "dry"</p></div>
+            <div class="factor"><h4>Hot week</h4><p>Average highs near 88°F speed up drying</p></div>
+            <div class="factor"><h4>This species dries fast</h4><p>Wants a watering when the top inch is dry</p></div>
+          </div>
+          <button class="logbtn" onclick="a3show('a3-log')">Log Watering</button>
+        </div>
+        <!-- LOG -->
+        <div class="screen a3-log" data-screen="a3-log">
+          <div class="statusbar"><span>9:41</span><span class="dots">▬</span></div>
+          <div class="topbar"><span class="back" onclick="a3show('a3-detail')">‹</span><h2>Log | Bonsai 🪴</h2></div>
+          <div class="scroll">
+            <div class="ql">What did you do?</div>
+            <div class="choices">
+              <button class="choice" data-g="did" onclick="a3pick(this,'did')">Watered</button>
+              <button class="choice" data-g="did" onclick="a3pick(this,'did')">Checked only</button>
+            </div>
+            <div class="ql">How did the soil feel?</div>
+            <div class="choices">
+              <button class="choice sm" data-g="soil" onclick="a3pick(this,'soil')">Dry</button>
+              <button class="choice sm" data-g="soil" onclick="a3pick(this,'soil')">Moist</button>
+              <button class="choice sm" data-g="soil" onclick="a3pick(this,'soil')">Wet</button>
+            </div>
+            <div class="notehd">Anything else you noticed?</div>
+            <textarea placeholder="Leave a note..."></textarea>
+          </div>
+          <button class="logbtn" onclick="a3save()">Save</button>
+        </div>
+        <div class="toast" id="a3toast"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="caption" id="caption">Inspection · tap a plant marked "Look"</div>
+
+<script>
+/* ---------- app switcher ---------- */
+const captions = {
+  app1:'Inspection · tap a plant marked "Look"',
+  app2:'Conversational · tap a chip or type a message',
+  app3:'Explanation · tap the Bonsai card'
+};
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.app').forEach(a=>a.classList.remove('active'));
+    document.getElementById(t.dataset.app).classList.add('active');
+    document.getElementById('caption').textContent = captions[t.dataset.app];
+  };
+});
+
+/* ---------- generic screen show within an app ---------- */
+function showScreen(appEl, name){
+  appEl.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+  appEl.querySelector(`[data-screen="${name}"]`).classList.add('show');
+}
+function toast(id,msg){
+  const t=document.getElementById(id); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ================= ALT 1 ================= */
+const app1El=document.getElementById('app1');
+let a1plant='Pothos';
+function a1show(n){ showScreen(app1El,n); }
+function a1open(name,loc,ctx){
+  a1plant=name;
+  document.getElementById('a1cName').textContent=name;
+  a1show('a1-check');
+}
+function a1result(kind){
+  document.getElementById('a1rName').textContent=a1plant;
+  const sub=document.getElementById('a1rSub');
+  const body=document.getElementById('a1resultBody');
+  if(kind==='dry'){
+    sub.textContent='Reported dry';
+    body.innerHTML=`
+      <div class="big"><h1>Water it now.</h1><p>Dry at one inch, 11 days since the last watering, and it has been warm and dry this week. Water until it runs from the drainage holes.</p></div>
+      <div class="facts"><h4>WHAT THIS TOLD THE APP</h4><p>This ${a1plant.toLowerCase()} dried out in <b>11 days</b>.<br>Previous cycles: <b>12</b>, <b>13</b> days.<br>Next look moved to <b>day 9</b> — ahead of dry, not after it.</p></div>
+      <div class="conf"><h4>CONFIDENCE IN THIS PLANT'S PACE</h4><div class="bar"><i></i></div><div class="cc">3 of 5 cycles observed — still adjusting</div></div>
+      <div class="why"><b>Why show the arithmetic?</b> Needfinding found people ignore schedules they cannot see the basis for. Here the basis is the user's own observation.</div>
+      <button class="cta" onclick="a1logged('watered')">Log the watering</button>`;
+  } else if(kind==='nolook'){
+    sub.textContent='Watered without checking';
+    body.innerHTML=`
+      <div class="big hold"><h1>Logged — no reading taken.</h1><p>That's fine, but with no soil reading this watering can't sharpen the timing. Next time a quick check tightens the estimate for this plant.</p></div>
+      <div class="why"><b>Why it matters:</b> the schedule learns from what you observe. A watering with no reading still counts, it just teaches the app less.</div>
+      <button class="cta hold" onclick="a1logged('nolook')">Done</button>`;
+  } else {
+    sub.textContent = kind==='damp' ? 'Reported damp' : 'Reported wet';
+    const line = kind==='damp'
+      ? 'Damp at one inch means there is still moisture down where the roots are. Watering now risks keeping it too wet.'
+      : 'Wet at one inch means the soil is still holding plenty of water. Adding more now is how roots end up sitting and rotting.';
+    body.innerHTML=`
+      <div class="big hold"><h1>Hold off — check again in 3 days.</h1><p>${line}</p></div>
+      <div class="facts"><h4>WHAT THIS TOLD THE APP</h4><p>Still moist at the last check.<br>Next look moved to <b>in 3 days</b> instead of watering today.</p></div>
+      <div class="why"><b>Why no watering?</b> Survey found people overwater when a reminder tells them to. A reading of damp or wet overrides the calendar.</div>
+      <button class="cta hold" onclick="a1logged('check')">Log the check</button>`;
+  }
+  a1show('a1-result');
+}
+function a1logged(kind){
+  a1show('a1-home');
+  toast('a1toast', kind==='watered'?'Watering logged ✓':(kind==='check'?'Check logged ✓':'Logged ✓'));
+}
+
+/* ================= ALT 3 ================= */
+const app3El=document.getElementById('app3');
+function a3show(n){ showScreen(app3El,n); }
+function a3detail(){ a3show('a3-detail'); }
+function a3pick(btn,group){
+  app3El.querySelectorAll(`.choice[data-g="${group}"]`).forEach(c=>c.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+function a3save(){
+  // update home card to settled-ish state
+  document.getElementById('a3tag-bonsai').outerHTML='<div class="tag check" style="background:#7ea88a;color:#0f2417">LOGGED ✓</div>';
+  document.getElementById('a3reason-bonsai').textContent='Watered just now · next look in ~9 days';
+  document.getElementById('a3count').textContent='1 plant needs attention';
+  // reset selections
+  app3El.querySelectorAll('.choice').forEach(c=>c.classList.remove('sel'));
+  app3El.querySelector('textarea').value='';
+  a3show('a3-home');
+  toast('a3toast','Saved ✓ — home updated');
+}
+
+/* ================= ALT 2 ================= */
+const a2thread=document.getElementById('a2thread');
+let a2loggedMonstera=false;
+
+function a2scroll(){ a2thread.scrollTop=a2thread.scrollHeight; }
+function a2me(text){
+  const d=document.createElement('div'); d.className='msg me'; d.textContent=text; a2thread.appendChild(d); a2scroll();
+}
+function a2appMsg(text){
+  const d=document.createElement('div'); d.className='reasoncard'; d.innerHTML=text; a2thread.appendChild(d); a2scroll();
+}
+
+function a2starter(kind){
+  if(kind==='log') a2doLog();
+  else if(kind==='attention') a2doDigest();
+  else if(kind==='away') a2doSitter();
+}
+function a2send(){
+  const inp=document.getElementById('a2input');
+  const txt=inp.value.trim(); if(!txt) return;
+  inp.value='';
+  a2me(txt);
+  // naive: if they mention watered → echo; else generic
+  if(/water|watered/i.test(txt)) setTimeout(a2echoWater,400);
+  else setTimeout(()=>a2appMsg("Got it. Try a suggestion chip below, or tell me what you watered and I'll log it."),400);
+}
+
+function a2doLog(){
+  a2me("Watered the monstera and the fern, the big one in the corner looks droopy");
+  setTimeout(a2echoWater,450);
+}
+function a2echoWater(){
+  const e=document.createElement('div'); e.className='echo';
+  e.innerHTML=`
+    <div class="row"><span class="ck">✓</span> Monstera · watered</div>
+    <div class="row"><span class="ck">✓</span> Fern · watered</div>
+    <div class="row"><span class="ck">✓</span> Corner palm · looking droopy <span class="obs">"the big one in the corner"</span><span class="pen">✎</span></div>
+    <div class="chips">
+      <button class="echo-chip sel">Corner palm</button>
+      <button class="echo-chip">Rubber plant</button>
+      <button class="echo-chip">+ New plant</button>
+    </div>`;
+  a2thread.appendChild(e);
+  e.querySelectorAll('.echo-chip').forEach(c=>c.onclick=()=>{
+    e.querySelectorAll('.echo-chip').forEach(x=>x.classList.remove('sel')); c.classList.add('sel');
+  });
+  a2scroll();
+  a2loggedMonstera=true;
+  setTimeout(()=>a2appMsg("Corner palm was watered 2 days ago. Droopy this soon can mean too wet — check the soil before watering again."),650);
+}
+
+function a2doDigest(){
+  a2me("What needs attention?");
+  setTimeout(()=>{
+    const d=document.createElement('div'); d.className='digest';
+    d.innerHTML=`
+      <div class="dplant" onclick="this.classList.toggle('open')">
+        <div class="dh"><span class="dot red"></span><h4>Fern</h4><span class="chev">›</span></div>
+        <div class="st">soil check due today</div>
+      </div>
+      <div class="dplant" onclick="this.classList.toggle('open')">
+        <div class="dh"><span class="dot red"></span><h4>Corner palm</h4><span class="chev">›</span></div>
+        <div class="st">day 12 of a 9 day rhythm</div>
+        <div class="exp">
+          <div class="ev"><span class="d2" style="background:#c3bdb0"></span><p>Looked droopy — too wet, skipped watering<span>Jul 24 · You</span></p></div>
+          <div class="ev"><span class="d2" style="background:#4b6b4f"></span><p>Watered<span>Jul 20 · Adrian</span></p></div>
+          <div class="ev"><span class="d2" style="background:#4b6b4f"></span><p>Watered<span>Jul 12 · You</span></p></div>
+          <div class="ev"><span class="d2" style="background:#c3bdb0"></span><p>Moved to the corner shelf<span>Jul 3 · Maya</span></p></div>
+        </div>
+      </div>
+      <div class="dplant" onclick="this.classList.toggle('open')">
+        <div class="dh"><span class="dot green"></span><h4>Monstera</h4><span class="chev">›</span></div>
+        <div class="st">fine until Saturday</div>
+      </div>`;
+    a2thread.appendChild(d); a2scroll();
+  },450);
+}
+
+function a2doSitter(){
+  a2me("Going away?");
+  setTimeout(()=>{
+    const d=document.createElement('div'); d.className='reasoncard';
+    d.innerHTML="Made a sitter page for Jul 20–27. Share this link — no app, no account for whoever's watching your plants.";
+    a2thread.appendChild(d);
+    const s=document.createElement('div'); s.className='sitter';
+    s.innerHTML=`
+      <div class="url">plants.app/sit/8k2x</div>
+      <div class="sh"><h4>Ruben's plants</h4><p>Jul 20 – 27 · 5 plants</p></div>
+      <div class="srow"><div class="box"></div><div class="si"><h5>Monstera</h5><p>Living room, by the window · 1 glass</p></div><button class="donebtn" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'Done ✓':'Done'">Done</button></div>
+      <div class="srow"><div class="box"></div><div class="si"><h5>Fern</h5><p>Kitchen windowsill · ½ glass</p></div><button class="donebtn" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'Done ✓':'Done'">Done</button></div>
+      <div class="srow"><div class="box"></div><div class="si"><h5>Corner palm</h5><p>Bookshelf, living room · 1 glass</p></div><button class="donebtn" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'Done ✓':'Done'">Done</button></div>
+      <div class="srow"><div class="box"></div><div class="si"><h5>Pothos</h5><p>Bedroom desk · ½ glass</p></div><button class="donebtn" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'Done ✓':'Done'">Done</button></div>
+      <div class="srow"><div class="box"></div><div class="si"><h5>Snake plant</h5><p>Hallway · skip this week</p></div><button class="donebtn" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'Done ✓':'Done'">Done</button></div>`;
+    a2thread.appendChild(s); a2scroll();
+  },450);
+}
+
+/* seed the chat with the reminder scenario so first view isn't empty */
+(function a2seed(){
+  const rem=document.createElement('div'); rem.className='remind';
+  rem.innerHTML=`<h4>Pothos — time for a check?</h4><ul><li>9 days since its last watering</li><li>Hot week — it dries out faster</li><li>Small terracotta pot</li></ul>`;
+  a2thread.appendChild(rem);
+  const rb=document.createElement('div'); rb.className='rowbtns';
+  rb.innerHTML=`<button class="rb done" onclick="a2remWatered(this)">Watered ✓</button><button class="rb" onclick="a2remNot(this)">Not thirsty yet</button><button class="rb" onclick="a2remLater(this)">Remind me tomorrow</button>`;
+  a2thread.appendChild(rb);
+  a2scroll();
+})();
+function a2remWatered(b){ a2me("Watered ✓"); setTimeout(()=>a2appMsg("Logged. Next check for the pothos in about 9 days."),400); a2disable(b); }
+function a2remNot(b){ a2me("Not thirsty yet"); setTimeout(()=>a2appMsg("Noted — stretching the pothos to every 12 days.<br><span style='color:#a8a294;font-size:12px;letter-spacing:.04em'>POTHOS · 9 DAYS → 12 DAYS</span>"),400); a2disable(b); }
+function a2remLater(b){ a2me("Remind me tomorrow"); setTimeout(()=>a2appMsg("Okay, I'll bring the pothos back tomorrow."),400); a2disable(b); }
+function a2disable(b){ b.parentNode.querySelectorAll('.rb').forEach(x=>{x.style.opacity=.4;x.style.pointerEvents='none';}); }
+</script>
+</body>
+</html>
